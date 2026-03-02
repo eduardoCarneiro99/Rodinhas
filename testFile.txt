@@ -1,0 +1,36 @@
+1001;Joao Silva;BMW;13/01/1999
+1002;Ana Costa;Mercedes;19/01/2002
+1003;Miguel Santos;Audi;05/06/1998
+1004;Carla Mendes;Toyota;21/09/2005
+1001;Pedro Lima;Ford;10/10/2001
+1005;Rita Campos;Honda
+1006;;Nissan;12/12/2000
+1007;Carlos Rocha;;01/01/2001
+1008;Luis Martins;BMW;1999-01-13
+1009;Sara Alves;Audi;31/02/2000
+ABC1;Mariana Pinto;Fiat;12/03/2003
+-1010;Andre Cruz;Seat;10/10/2000
+1011;Helena Sousa;Opel;10/10/2000;EXTRA
+;;;;;
+
+1012;A1 Test;Brand;01/01/2000
+1013;A2 Test;Brand;01/01/2000
+1014;A3 Test;Brand;01/01/2000
+1015;A4 Test;Brand;01/01/2000
+1016;A5 Test;Brand;01/01/2000
+1017;A6 Test;Brand;01/01/2000
+1018;A7 Test;Brand;01/01/2000
+1019;A8 Test;Brand;01/01/2000
+1020;A9 Test;Brand;01/01/2000
+1021;A10 Test;Brand;01/01/2000
+1022;A11 Test;Brand;01/01/2000
+1023;A12 Test;Brand;01/01/2000
+1024;A13 Test;Brand;01/01/2000
+1025;A14 Test;Brand;01/01/2000
+1026;A15 Test;Brand;01/01/2000
+1027;A16 Test;Brand;01/01/2000
+1028;A17 Test;Brand;01/01/2000
+1029;A18 Test;Brand;01/01/2000
+1030;A19 Test;Brand;01/01/2000
+1031;A20 Test;Brand;01/01/2000
+1032;A21 Test;Brand;01/01/2000

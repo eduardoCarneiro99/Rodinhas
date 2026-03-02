@@ -10,11 +10,8 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Formatter;
-import java.util.List;
 
 public class Rodinhas {
 
@@ -25,19 +22,28 @@ public class Rodinhas {
         String[][] participants = new String[MAX_PARTICIPANTS][N_INFO_FIELDS_MEMBER];
         double[][] prizes = new double[MAX_PARTICIPANTS][N_RACES];
         int[][] times = new int[MAX_PARTICIPANTS][N_RACES];
-        int op = 0, nParticipants = 0, nRaces = 0;
-        FileWriter writerErrorParticipants = new FileWriter(FILE_LOG_ERRORS_PARTICIPANTS, true);
-        FileWriter writterErrorRaces = new FileWriter(FILE_LOG_ERRORS_RACES_INFO, true);
-        FileWriter writterErrorRaceTimes = new FileWriter(FILE_LOG_ERRORS_RACE_TIMES, true);
+        int option = 0, nParticipants = 0, nRaces = 0;
+        FileWriter writerErrorParticipants;
+        FileWriter writterErrorRaces;
+        FileWriter writterErrorRaceTimes;
+
+        try {
+            writerErrorParticipants = new FileWriter(FILE_LOG_ERRORS_PARTICIPANTS, true);
+            writterErrorRaces = new FileWriter(FILE_LOG_ERRORS_RACES_INFO, true);
+            writterErrorRaceTimes = new FileWriter(FILE_LOG_ERRORS_RACE_TIMES, true);
+        } catch (IOException e) {
+            System.out.println("Error initializing log files: " + e.getMessage());
+            return;
+        }
 
         String menu =
                 "1-Add participants\n2-View Information\n3-Update Information\n4-Load Races\n5-Load times for a race\n6-Calculate prizes\n7-Backup\n8-Remove participant\n9-Add participant\n10-View average speeds of a participant\n11-Average of average speeds\n12-Create file with all information\n0-EXIT\n\nChoose an option:";
 
         do {
             System.out.println(menu);
-            op = input.nextInt();
+            option = input.nextInt();
             input.nextLine();
-            switch (op) {
+            switch (option) {
                 case 1:
                     System.out.println("File Name:");
                     String fileName = input.nextLine();
@@ -72,13 +78,13 @@ public class Rodinhas {
                     nParticipants = newParticipant(participants, nParticipants);
                     break;
                 case 10:
-                    averageSpeed(nParticipants, participants, races, times);
+                    averageSpeedAndFastestSlowest(nParticipants, participants, races, times);
                     break;
                 case 11:
-                    case11(races, times, participants, nParticipants, prizes);
+                    raceResults(races, times, participants, nParticipants, prizes);
                     break;
                 case 12:
-                    case12(participants, nParticipants, races, times, prizes);
+                    createFileWithGrandPrizeInfo(participants, nParticipants, races, times, prizes);
                     break;
                 case 0:
                     break;
@@ -86,7 +92,15 @@ public class Rodinhas {
                     System.out.println("Incorrect option. Repeat");
                     break;
             }
-        } while (op != 0);
+        } while (option != 0);
+
+        try {
+            writerErrorParticipants.close();
+            writterErrorRaces.close();
+            writterErrorRaceTimes.close();
+        } catch (IOException e) {
+            System.out.println("Error closing log files: " + e.getMessage());
+        }
     }
 
     // - Case 1
@@ -428,6 +442,8 @@ public class Rodinhas {
                 }
             }
         }
+
+        prizes[minTimeIndex][raceIndex] += 500; // the fastest participant gets an extra 500€
         System.out.println("Prizes loaded successfully");
     }
 
@@ -452,7 +468,7 @@ public class Rodinhas {
 
     // - case 7
     public static void backup(String[][] participants, int nParticipants, int[][] times,
-            String[] races) throws FileNotFoundException {
+            String[][] races) throws FileNotFoundException {
         try (Formatter outputBackup = new Formatter(new File("Backup.txt"))) {
             backupParticipants(participants, nParticipants, outputBackup);
             outputBackup.format("%n");
@@ -461,6 +477,7 @@ public class Rodinhas {
             backupRaces(races, outputBackup);
             outputBackup.format("%n");
             System.out.println("Backup Created");
+            outputBackup.close();
         }
     }
 
@@ -491,12 +508,12 @@ public class Rodinhas {
         outputBackup.format("%s%n", "**************TIMES**************");
     }
 
-    public static void backupRaces(String[] races, Formatter outputBackup) {
+    public static void backupRaces(String[][] races, Formatter outputBackup) {
         outputBackup.format("%s%n", "Races");
         String aux;
         for (int i = 0; i < N_RACES; i++) {
             aux = "";
-            aux += races[i] + "; ";
+            aux += races[i][0] + "; ";
             outputBackup.format("%s%n", aux);
         }
         outputBackup.format("%s%n", "**************RACES**************");
@@ -509,26 +526,27 @@ public class Rodinhas {
         System.out.println("Member number to remove");
         String value = input.nextLine();
         int pos = searchElement(value, nParticipants, participants);
-        if (pos != -1) {
-            for (int i = pos; i < nParticipants; i++) {
-                participants[i] = participants[i + 1];
-            }
-            participants[nParticipants] = null;
-            for (int i = pos; i < nParticipants; i++) {
-                times[i] = times[i + 1];
-            }
-            for (int j = 0; j < N_RACES; j++) {
-                times[nParticipants - 1][j] = 0;
-            }
-            for (int i = pos; i < nParticipants; i++) {
-                prizes[i] = prizes[i + 1];
-            }
-            for (int j = 0; j < N_RACES; j++) {
-                prizes[nParticipants - 1][j] = 0;
-            }
 
-            nParticipants--;
+        if (pos == -1) {
+            System.out.println("Participant not found");
+            return nParticipants;
         }
+
+        // Shift elements down
+        for (int i = pos; i < nParticipants - 1; i++) {
+            participants[i] = participants[i + 1];
+            times[i] = times[i + 1];
+            prizes[i] = prizes[i + 1];
+        }
+
+        // Clear the last position
+        nParticipants--;
+        participants[nParticipants] = null;
+        for (int j = 0; j < N_RACES; j++) {
+            times[nParticipants][j] = 0;
+            prizes[nParticipants][j] = 0;
+        }
+
         return nParticipants;
     }
     // - END case 8
@@ -539,16 +557,16 @@ public class Rodinhas {
             System.out.println("Cannot add new participant, remove one first");
         } else {
             System.out.println("Member number of new participant?");
-            String newMemberNum = input.nextLine();
-            int pos = searchElement(newMemberNum, nParticipants, participants);
-            if (pos == -1) {
+            String newMemberNumber = input.nextLine();
+            int memberIndex = searchElement(newMemberNumber, nParticipants, participants);
+            if (memberIndex == -1) {
                 System.out.println("Name of new participant?");
                 String newName = input.nextLine();
                 System.out.println("Car brand of new participant?");
                 String newCar = input.nextLine();
                 System.out.println("Construction date of new participant's car?");
                 String newDate = input.nextLine();
-                participants[nParticipants][0] = newMemberNum;
+                participants[nParticipants][0] = newMemberNumber;
                 participants[nParticipants][1] = newName;
                 participants[nParticipants][2] = newCar;
                 participants[nParticipants][3] = newDate;
@@ -563,84 +581,84 @@ public class Rodinhas {
     // - END case 9
 
     // - case 10
-    public static void averageSpeed(int nParticipants, String[][] participants, String[] races,
-            int[][] times) {
+    public static void averageSpeedAndFastestSlowest(int nParticipants, String[][] participants,
+            String[][] races, int[][] times) {
         System.out.println("Member to view");
         String memberNum = input.nextLine();
-        int pos = searchElement(memberNum, nParticipants, participants);
+        int memberIndex = searchElement(memberNum, nParticipants, participants);
         for (int i = 0; i < N_RACES; i++) {
-            String[] temp = races[i].split(DATA_SEPARATOR_4);
-            if (times[pos][i] != 0) {
-                double timeInHours = (double) (times[pos][i]) / 3600;
-                double avgSpeed = (double) (distances(races, i) / timeInHours);
-                String value = String.format("%.3f", avgSpeed);
-                System.out.println("The average speed of participant " + memberNum + " in race "
-                        + temp[0] + " was: " + value + " Km/h");
-                fastest(i, times, nParticipants, races);
-                slowest(i, times, nParticipants, races);
-            } else {
-                System.out.println("This member did not participate in race " + temp[0]);
+            System.out.println(races[i][0]);
+            if (times[memberIndex][i] == 0) {
+                System.out.println("This member did not participate in the race");
+                return;
             }
+
+            double timeInHours = (double) (times[memberIndex][i]) / 3600;
+            int distance = Integer.parseInt(races[i][1]);
+            double avgSpeed = (double) distance / timeInHours;
+            String value = String.format("%.2f", avgSpeed);
+            System.out.println("The average speed of participant " + memberNum + " in race was: "
+                    + value + " Km/h");
+            fastestAndSlowestParticipant(i, times, nParticipants, races);
         }
     }
 
-    public static void fastest(int i, int[][] times, int nParticipants, String[] races) {
-        int minTime = 0;
-        for (int p = 0; p < nParticipants; p++) {
-            if (times[p][i] != 0) {
-                minTime = times[p][i];
-                break;
-            }
-        }
-        for (int k = 0; k < nParticipants; k++) {
-            if (times[k][i] != 0 && times[k][i] < minTime) {
-                minTime = times[k][i];
-            }
-        }
-        double timeInHours = (double) minTime / 3600;
-        double avgSpeed = (double) distances(races, i) / timeInHours;
-        String value = String.format("%.3f", avgSpeed);
-        System.out.println("The average speed of the fastest participant in this race was: " + value
-                + " Km/h");
-    }
-
-    public static void slowest(int i, int[][] times, int nParticipants, String[] races) {
+    public static void fastestAndSlowestParticipant(int raceIndex, int[][] times, int nParticipants,
+            String[][] races) {
+        int minTime = Integer.MAX_VALUE;
         int maxTime = 0;
-        for (int k = 0; k < nParticipants; k++) {
-            if (times[k][i] > maxTime) {
-                maxTime = times[k][i];
+
+        for (int p = 0; p < nParticipants; p++) {
+            if (times[p][raceIndex] != 0) {
+                if (times[p][raceIndex] < minTime) {
+                    minTime = times[p][raceIndex];
+                }
+                if (times[p][raceIndex] > maxTime) {
+                    maxTime = times[p][raceIndex];
+                }
             }
         }
-        double timeInHours = (double) maxTime / 3600;
-        double avgSpeed = (double) distances(races, i) / timeInHours;
-        String value = String.format("%.3f", avgSpeed);
-        System.out.println("The average speed of the slowest participant in this race was: " + value
-                + " Km/h");
+
+        double distance = Double.parseDouble(races[raceIndex][1]);
+
+        if (minTime != Integer.MAX_VALUE) {
+            printParticipantSpeed(minTime, distance, "fastest");
+        }
+        if (maxTime > 0) {
+            printParticipantSpeed(maxTime, distance, "slowest");
+        }
+    }
+
+    private static void printParticipantSpeed(int timeInSeconds, double distance, String type) {
+        double timeInHours = (double) timeInSeconds / 3600;
+        double avgSpeed = distance / timeInHours;
+        String value = String.format("%.2f", avgSpeed);
+        System.out.println("The average speed of the " + type + " participant in this race was: "
+                + value + " Km/h");
     }
     // - END case 10
 
     // - case 11
-    public static void case11(String[] races, int[][] times, String[][] participants,
+    public static void raceResults(String[][] races, int[][] times, String[][] participants,
             int nParticipants, double[][] prizes) {
         for (int i = 0; i < N_RACES; i++) {
-            String[] temp = races[i].split(DATA_SEPARATOR_4);
             double sumSpeeds = 0;
-            int countParticipants = 0;
+            int raceParticipants = 0;
             double sumPrizes = 0;
+            int distance = Integer.parseInt(races[i][1]);
             for (int j = 0; j < nParticipants; j++) {
-                int distance = distances(races, i);
                 int time = times[j][i];
                 if (time != 0) {
                     double timeInHours = (double) time / 3600;
                     double speed = (double) distance / timeInHours;
                     sumSpeeds += speed;
-                    countParticipants++;
+                    raceParticipants++;
                 }
             }
-            String value = String.format("%.3f", (sumSpeeds / countParticipants));
-            System.out.println("The average of the average speeds in race " + temp[0] + " was "
-                    + value + "km/h");
-            fastest(i, times, nParticipants, races);
+            System.out.println("Race: " + races[i][0]);
+            String averageSpeed = String.format("%.2f", (sumSpeeds / raceParticipants));
+            System.out.println("The average speed in race was " + averageSpeed + "km/h");
+            printFastestRaceParticipant(i, distance, times, nParticipants, participants);
             for (int k = 0; k < nParticipants; k++) {
                 sumPrizes += prizes[k][i];
             }
@@ -648,11 +666,29 @@ public class Rodinhas {
             System.out.println();
         }
     }
+
+    private static void printFastestRaceParticipant(int raceIndex, int distance, int[][] times,
+            int nParticipants, String[][] participants) {
+        int minTime = Integer.MAX_VALUE;
+
+        for (int p = 0; p < nParticipants; p++) {
+            if (times[p][raceIndex] != 0) {
+                if (times[p][raceIndex] < minTime) {
+                    minTime = times[p][raceIndex];
+                }
+            }
+        }
+
+        if (minTime != Integer.MAX_VALUE) {
+            printParticipantSpeed(minTime, distance, "fastest");
+        }
+    }
+
     // END case 11
 
     // - case 12
-    public static void case12(String[][] participants, int nParticipants, String[] races,
-            int[][] times, double[][] prizes) throws FileNotFoundException {
+    public static void createFileWithGrandPrizeInfo(String[][] participants, int nParticipants,
+            String[][] races, int[][] times, double[][] prizes) throws FileNotFoundException {
         double totalPrizes = 0;
         try (Formatter output = new Formatter(new File("GrandPrize.txt"))) {
             output.format("%50s%n", "Prize Listing");
@@ -684,7 +720,7 @@ public class Rodinhas {
                 output.format("%6s", participants[indices[i]][0]);
                 output.format("%3s", " ");
                 output.format("%-20s", reducedName(participants[indices[i]][1]));
-                output.format("%10s", age(convertDateToYYYYMMDD(participants[indices[i]][3])));
+                output.format("%10s", (getCarAgeFromDate(participants[indices[i]][3])));
                 float p = calculatePrizesSum(prizes, indices[i]);
                 totalPrizes += p;
                 output.format("%24.2f%n", p);
